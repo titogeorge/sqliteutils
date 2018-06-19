@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/titogeorge/sqliteutils"
-
 )
 
 type AllTypes struct {
@@ -26,14 +25,14 @@ type AllTypes struct {
 	Aint64    int64
 	Afloat32  float32
 	Afloat64  float64
-	Timestamp time.Time	
+	Timestamp time.Time
 }
 
 func (a *AllTypes) GetTableName() string {
 	return "AllTypes"
 }
 
-func (a *AllTypes) GetIDField() string{
+func (a *AllTypes) GetIDField() string {
 	return "Id"
 }
 
