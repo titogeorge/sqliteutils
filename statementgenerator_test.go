@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
+	"encoding/json"
 	"github.com/titogeorge/sqliteutils"
 )
 
@@ -26,6 +26,7 @@ type AllTypes struct {
 	Afloat32  float32
 	Afloat64  float64
 	Timestamp time.Time
+	InnerJson Inner
 }
 
 func (a *AllTypes) GetTableName() string {
@@ -34,6 +35,16 @@ func (a *AllTypes) GetTableName() string {
 
 func (a *AllTypes) GetIDField() string {
 	return "Id"
+}
+
+type Inner struct {
+	A int
+	B string
+}
+
+func (i Inner) String() string {
+	b, _ := json.Marshal(i)
+	return string(b)
 }
 
 func Test_affinity(t *testing.T) {
@@ -70,7 +81,7 @@ func Test_affinity(t *testing.T) {
 func Test_GenerateCreateStmt(t *testing.T) {
 
 	value := sqliteutils.GenerateCreateStmt(&AllTypes{})
-	expected := "CREATE TABLE AllTypes( Id integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT); "
+	expected := "CREATE TABLE AllTypes( Id integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT, InnerJson TEXT); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}
@@ -82,9 +93,10 @@ func Test_GenerateInsertStmt(t *testing.T) {
 	if err != nil {
 		fmt.Println("Error while parsing date :", err)
 	}
-	value := sqliteutils.GenerateInsertStmt(&AllTypes{Auint: 34, Auint8: 23, Auint16: 1234, Auint32: 1234, Auint64: 1234, ABool: true, AString: "dfgdfgfd", Aint: 1234, Aint8: 32, Aint16: 1234, Aint32: 1234, Afloat32: 1234, Afloat64: 1234, Aint64: 1234, Timestamp: time1}, true)
+	inner := &Inner{A: 10, B: "Test"}
+	value := sqliteutils.GenerateInsertStmt(&AllTypes{Auint: 34, Auint8: 23, Auint16: 1234, Auint32: 1234, Auint64: 1234, ABool: true, AString: "dfgdfgfd", Aint: 1234, Aint8: 32, Aint16: 1234, Aint32: 1234, Afloat32: 1234, Afloat64: 1234, Aint64: 1234, Timestamp: time1, InnerJson: *inner}, true)
 	//t.Log(value)
-	expected := "INSERT INTO AllTypes( Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp) VALUES (34, 23, 1234, 1234, 1234, \"true\", \"dfgdfgfd\", 1234, 32, 1234, 1234, 1234, 1234, 1234, \"2018-06-16 00:00:00 +0000 UTC\"); "
+	expected := "INSERT INTO AllTypes( Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp, InnerJson) VALUES (34, 23, 1234, 1234, 1234, \"true\", \"dfgdfgfd\", 1234, 32, 1234, 1234, 1234, 1234, 1234, \"2018-06-16 00:00:00 +0000 UTC\", \"{\"A\":10,\"B\":\"Test\"}\"); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}
