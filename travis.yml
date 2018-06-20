@@ -3,6 +3,6 @@ language: go
 go:
   - "1.10.x"
 
-  script:
+script:
   - go build
   - go test -v
