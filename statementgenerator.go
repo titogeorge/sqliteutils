@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 //GenerateCreateStmt generate the sqlite create statement for given struct
@@ -132,14 +131,9 @@ func getStringForValue(sf reflect.StructField, val reflect.Value) (value string)
 		value += "\""
 		break
 	case reflect.Struct:
-		switch sf.Type {
-		case reflect.TypeOf(time.Time{}):
-			logTime := reflect.Indirect(val).FieldByName(sf.Name).Interface().(time.Time)
-			loc, _ := time.LoadLocation("UTC")
-			value += "\""
-			value += logTime.In(loc).String()
-			value += "\""
-		}
+		value += "\""
+		value += fmt.Sprintf("%s", reflect.Indirect(val).FieldByName(sf.Name).Interface())
+		value += "\""
 		break
 
 	default:
