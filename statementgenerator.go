@@ -18,8 +18,11 @@ func GenerateCreateStmt(dao Dao) string {
 		sBuilder.WriteString(val.Type().Field(i).Name)
 		sBuilder.WriteString(" ")
 		sBuilder.WriteString(GetSQLiteAffinity(val.Type().Field(i).Type.Kind()))
-		if i == 0 {
-			sBuilder.WriteString(" primary key AUTOINCREMENT")
+		if dao.GetIDField() == val.Type().Field(i).Name {
+			sBuilder.WriteString(" primary key")
+			if dao.AutoIncrementPK() {
+				sBuilder.WriteString(" AUTOINCREMENT")
+			}
 		}
 
 		if i != val.NumField()-1 {
@@ -42,14 +45,12 @@ func GetSQLiteAffinity(fType reflect.Kind) string {
 	}
 }
 
-//INSERT INTO TABLE_NAME [(column1, column2, column3,...columnN)]  VALUES (value1, value2, value3,...valueN);
-
 //GenerateInsertStmt create the insert statement for the given struct
-func GenerateInsertStmt(dao Dao, emptyID bool) string {
+func GenerateInsertStmt(dao Dao) string {
 	var sBuilder strings.Builder
 	sBuilder.WriteString("INSERT INTO ")
 	sBuilder.WriteString(dao.GetTableName())
-	sBuilder.WriteString("( ")
+	sBuilder.WriteString("(")
 	val := reflect.ValueOf(dao).Elem()
 
 	var fields []reflect.StructField
@@ -59,7 +60,7 @@ func GenerateInsertStmt(dao Dao, emptyID bool) string {
 
 	}
 	for c, sf := range fields {
-		if emptyID && dao.GetIDField() == sf.Name {
+		if dao.AutoIncrementPK() && dao.GetIDField() == sf.Name {
 			continue
 		}
 		sBuilder.WriteString(sf.Name)
