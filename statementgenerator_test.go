@@ -118,7 +118,7 @@ func Test_affinity(t *testing.T) {
 func Test_GenerateCreateStmt(t *testing.T) {
 
 	value := sqliteutils.GenerateCreateStmt(&AllTypes{})
-	expected := "CREATE TABLE AllTypes( Id integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT, InnerJson TEXT); "
+	expected := "CREATE TABLE AllTypes( ID integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT, InnerJson TEXT); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}

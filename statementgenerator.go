@@ -70,7 +70,7 @@ func GenerateInsertStmt(dao Dao) string {
 	}
 	sBuilder.WriteString(") VALUES (")
 	for c, sf := range fields {
-		if "Id" == sf.Name {
+		if dao.AutoIncrementPK() && dao.GetIDField() == sf.Name {
 			continue
 		}
 		sBuilder.WriteString(getStringForValue(sf, val))
