@@ -11,7 +11,7 @@ import (
 )
 
 type AllTypes struct {
-	Id        int64
+	ID        int64
 	Auint     uint
 	Auint8    uint8
 	Auint16   uint16
@@ -35,7 +35,7 @@ func (a *AllTypes) GetTableName() string {
 }
 
 func (a *AllTypes) GetIDField() string {
-	return "Id"
+	return "ID"
 }
 
 func (a *AllTypes) AutoIncrementPK() bool {
