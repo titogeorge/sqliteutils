@@ -10,6 +10,24 @@ import (
 	"github.com/titogeorge/sqliteutils"
 )
 
+type MuitiPK struct {
+	ID     int64
+	Type   string
+	AValue string
+}
+
+func (a *MuitiPK) GetTableName() string {
+	return "MuitiPK"
+}
+
+func (a *MuitiPK) GetIDFields() []string {
+	return []string{"ID", "Type"}
+}
+
+func (a *MuitiPK) AutoIncrementPK() bool {
+	return false
+}
+
 type AllTypes struct {
 	ID        int64
 	Auint     uint
@@ -28,14 +46,15 @@ type AllTypes struct {
 	Afloat64  float64
 	Timestamp time.Time
 	InnerJson Inner
+	Groupings GroupingList
 }
 
 func (a *AllTypes) GetTableName() string {
 	return "AllTypes"
 }
 
-func (a *AllTypes) GetIDField() string {
-	return "ID"
+func (a *AllTypes) GetIDFields() []string {
+	return []string{"ID"}
 }
 
 func (a *AllTypes) AutoIncrementPK() bool {
@@ -62,12 +81,29 @@ type AllTypes_NPK struct {
 	InnerJson Inner
 }
 
+type GroupingList []Grouping
+
+func (gl GroupingList) String() string {
+	j, _ := json.Marshal(gl)
+	return string(j)
+}
+
+type Grouping struct {
+	Name  string
+	Value string
+}
+
+func (g Grouping) String() string {
+	j, _ := json.Marshal(g)
+	return string(j)
+}
+
 func (a *AllTypes_NPK) GetTableName() string {
 	return "AllTypesNPK"
 }
 
-func (a *AllTypes_NPK) GetIDField() string {
-	return "SomeId"
+func (a *AllTypes_NPK) GetIDFields() []string {
+	return []string{"SomeId"}
 }
 
 func (a *AllTypes_NPK) AutoIncrementPK() bool {
@@ -118,7 +154,7 @@ func Test_affinity(t *testing.T) {
 func Test_GenerateCreateStmt(t *testing.T) {
 
 	value := sqliteutils.GenerateCreateStmt(&AllTypes{})
-	expected := "CREATE TABLE AllTypes( ID integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT, InnerJson TEXT); "
+	expected := "CREATE TABLE IF NOT EXISTS AllTypes( ID integer primary key AUTOINCREMENT, Auint integer, Auint8 integer, Auint16 integer, Auint32 integer, Auint64 integer, ABool TEXT, AString TEXT, Aint integer, Aint8 integer, Aint16 integer, Aint32 integer, Aint64 integer, Afloat32 REAL, Afloat64 REAL, Timestamp TEXT, InnerJson TEXT, Groupings TEXT); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}
@@ -131,9 +167,12 @@ func Test_GenerateInsertStmt(t *testing.T) {
 		fmt.Println("Error while parsing date :", err)
 	}
 	inner := &Inner{A: 10, B: "Test"}
-	value := sqliteutils.GenerateInsertStmt(&AllTypes{Auint: 34, Auint8: 23, Auint16: 1234, Auint32: 1234, Auint64: 1234, ABool: true, AString: "dfgdfgfd", Aint: 1234, Aint8: 32, Aint16: 1234, Aint32: 1234, Afloat32: 1234, Afloat64: 1234, Aint64: 1234, Timestamp: time1, InnerJson: *inner})
-	//t.Log(value)
-	expected := "INSERT INTO AllTypes(Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp, InnerJson) VALUES (34, 23, 1234, 1234, 1234, \"true\", \"dfgdfgfd\", 1234, 32, 1234, 1234, 1234, 1234, 1234, \"2018-06-16 00:00:00 +0000 UTC\", \"{\"A\":10,\"B\":\"Test\"}\"); "
+	group1 := Grouping{Name: "Log", Value: "abc"}
+	group2 := Grouping{Name: "Log", Value: "abc"}
+	arr := [2]Grouping{group1, group2}
+	var gl GroupingList = arr[:]
+	value := sqliteutils.GenerateInsertStmt(&AllTypes{Auint: 34, Auint8: 23, Auint16: 1234, Auint32: 1234, Auint64: 1234, ABool: true, AString: "dfgd'fgfd", Aint: 1234, Aint8: 32, Aint16: 1234, Aint32: 1234, Afloat32: 1234, Afloat64: 1234, Aint64: 1234, Timestamp: time1, InnerJson: *inner, Groupings: gl})
+	expected := "INSERT INTO AllTypes(Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp, InnerJson, Groupings) VALUES (34, 23, 1234, 1234, 1234, 'true', 'dfgd''fgfd', 1234, 32, 1234, 1234, 1234, 1234, 1234, '2018-06-16 00:00:00 +0000 UTC', '{\"A\":10,\"B\":\"Test\"}', '[{\"Name\":\"Log\",\"Value\":\"abc\"},{\"Name\":\"Log\",\"Value\":\"abc\"}]'); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}
@@ -148,7 +187,52 @@ func Test_GenerateInsertStmt_no_auto_inc(t *testing.T) {
 	inner := &Inner{A: 10, B: "Test"}
 	value := sqliteutils.GenerateInsertStmt(&AllTypes_NPK{SomeId: 10, Auint: 34, Auint8: 23, Auint16: 1234, Auint32: 1234, Auint64: 1234, ABool: true, AString: "dfgdfgfd", Aint: 1234, Aint8: 32, Aint16: 1234, Aint32: 1234, Afloat32: 1234, Afloat64: 1234, Aint64: 1234, Timestamp: time1, InnerJson: *inner})
 	//t.Log(value)
-	expected := "INSERT INTO AllTypesNPK(SomeId, Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp, InnerJson) VALUES (10, 34, 23, 1234, 1234, 1234, \"true\", \"dfgdfgfd\", 1234, 32, 1234, 1234, 1234, 1234, 1234, \"2018-06-16 00:00:00 +0000 UTC\", \"{\"A\":10,\"B\":\"Test\"}\"); "
+	expected := "INSERT INTO AllTypesNPK(SomeId, Auint, Auint8, Auint16, Auint32, Auint64, ABool, AString, Aint, Aint8, Aint16, Aint32, Aint64, Afloat32, Afloat64, Timestamp, InnerJson) VALUES (10, 34, 23, 1234, 1234, 1234, 'true', 'dfgdfgfd', 1234, 32, 1234, 1234, 1234, 1234, 1234, '2018-06-16 00:00:00 +0000 UTC', '{\"A\":10,\"B\":\"Test\"}'); "
+	if value != expected {
+		t.Errorf("String should be %s instead of %s", expected, value)
+	}
+}
+
+func Test_GenerateVirtualCreateStmt(t *testing.T) {
+
+	value := sqliteutils.GenerateCreateVirtualTableStmt("test", "csv", false, "filename='thefile.csv'")
+	expected := "CREATE VIRTUAL TABLE test USING csv(filename='thefile.csv');"
+	if value != expected {
+		t.Errorf("String should be %s instead of %s", expected, value)
+	}
+}
+
+func Test_GenerateTempVirtualCreateStmt(t *testing.T) {
+
+	value := sqliteutils.GenerateCreateVirtualTableStmt("test", "csv", true, "filename='thefile.csv'")
+	expected := "CREATE VIRTUAL TABLE temp.test USING csv(filename='thefile.csv');"
+	if value != expected {
+		t.Errorf("String should be %s instead of %s", expected, value)
+	}
+}
+
+func Test_GetSelectQueryByPK(t *testing.T) {
+	pkValue := "pk_value"
+	value := sqliteutils.GetSelectQueryByPK(&AllTypes{}, &pkValue)
+	expected := "select * from AllTypes where ID = 'pk_value';"
+	if value != expected {
+		t.Errorf("String should be %s instead of %s", expected, value)
+	}
+}
+
+func Test_GenerateCreateStmtMultiPK(t *testing.T) {
+
+	value := sqliteutils.GenerateCreateStmt(&MuitiPK{})
+	expected := "CREATE TABLE IF NOT EXISTS MuitiPK( ID integer, Type TEXT, AValue TEXT, PRIMARY KEY(ID, Type)); "
+	if value != expected {
+		t.Errorf("String should be %s instead of %s", expected, value)
+	}
+}
+
+func Test_GenerateInsertStmt_MultiPK(t *testing.T) {
+	value := sqliteutils.GenerateInsertStmt(&MuitiPK{ID: 10, Type: "Test", AValue: "ATest"})
+	//t.Log(value)
+	expected := "INSERT INTO MuitiPK(ID, Type, AValue) VALUES (10, 'Test', 'ATest'); "
 	if value != expected {
 		t.Errorf("String should be %s instead of %s", expected, value)
 	}
